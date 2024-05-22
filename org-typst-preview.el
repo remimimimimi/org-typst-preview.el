@@ -70,6 +70,12 @@ Returns t if this is block formula, nil otherwise."
   "Return t if closing of code block forward from cursor."
   (eq ?\] (following-char)))
 
+;; FIXME: There's an issues when org file contains links and when syntax is
+;;        incorrect. Think about ways to avoid those issues. Maybe assume that
+;;        typst code block are not inherited? Another way may be is to handle []
+;;        as well and continue assuming that syntax is correct. One more way to
+;;        do it is to start "thinking" about typst code blocks when first
+;;        opening bracket met and stack is nil.
 (defun org-typst-preview--all-code-blocks ()
   "Scan buffer and return list pairs of format (BEG . END).
 
