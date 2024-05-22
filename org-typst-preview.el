@@ -85,17 +85,15 @@ Note that list in reverse order."
          ((org-typst-preview--opening-forward)
           (if (eq 'closing (car stack))
               (pop stack)
-            (progn
-              (push 'opening stack)
-              (when (length= stack 1)
-                (setq beg (point))))))
+            (push 'opening stack)
+            (when (length= stack 1)
+              (setq beg (point)))))
          ((org-typst-preview--closing-forward)
-          (if (eq 'opening (car stack))
-              (progn
-                (when (length= stack 1)
-                  (push (cons beg (1+ (point))) spans))
-                (pop stack))
-            (push 'closing stack))))
+          (if (not (eq 'opening (car stack)))
+              (push 'closing stack)
+            (when (length= stack 1)
+              (push (cons beg (1+ (point))) spans))
+            (pop stack))))
         (forward-char))
       spans)))
 
@@ -106,9 +104,9 @@ Note that list in reverse order."
   (let* ((spans (org-typst-preview--all-code-blocks))
          (pos (point))
          (span (seq-find
-                #'(lambda (p) (<= (car p) pos (1- (cdr p))))
+                (lambda (p) (<= (car p) pos (1- (cdr p))))
                 spans)))
-    ;; XXX: Maybe push-mark?
+    ;; REVIEW: Maybe push-mark?
     (set-mark (car span))
     (goto-char (cdr span))))
 
@@ -139,7 +137,7 @@ Currently passes weight and size."
     ;; ;; TODO: Think what to do to display fonts better
     ;; ("top-edge" . ,(format "%S" "ascender"))
     ;; ("bottom-edge" . ,(format "%S" "descender"))
-    (mapconcat #'(lambda (p) (format "%s: %s" (car p) (cdr p))) options ", ")))
+    (mapconcat (lambda (p) (format "%s: %s" (car p) (cdr p))) options ", ")))
 
 (defun org-typst-preview--generate-typst-file (file-path typst-code &optional common-configuration)
   "Generate typst file at FILE-PATH with TYPST-CODE and COMMON-CONFIGURATION."
@@ -164,7 +162,7 @@ When REPLACE and DIR non-nil"
          image-file-path)))
 
 ;; TODO: Disable image when cursor on image and rerender after it exists area.
-;; Like in https://github.com/karthink/org-preview
+;;       Like in https://github.com/karthink/org-preview
 (defun org-typst-preview-format (beg end)
   "Display preview at BEG END span."
   (let ((image-path (org-typst-preview--generate-svg-image (buffer-substring beg end)))
@@ -189,7 +187,7 @@ When REPLACE and DIR non-nil"
   (plist-get (cdr (overlay-get ov 'display)) :file))
 
 ;; FIXME: In some unknown corner cases directories are steal leaking, but this
-;; may be due to constant change of code during development.
+;;        may be due to constant change of code during development.
 (defun org-typst-preview--remove-overlay (ov)
   "Remove typst preview OV and directory with image."
   (let* ((image-path (org-typst-preview--overlay-image-path ov))
@@ -276,9 +274,9 @@ Run rerender on every theme change."
 (add-hook 'after-setting-font-hook #'org-typst-preview-rerender-all-org-buffers)
 
 ;; TODO: There's a lot of issues with advices, mostly because of timings of
-;; loading things. So trigger rerender manually on theme change.
+;;       loading things. So trigger rerender manually on theme change.
 ;;
-;; ;; XXX: Add noticable theme change lag, but usually this shouldn't be an issue.
+;; ;; REVIEW: Add noticable theme change lag, but usually this shouldn't be an issue.
 ;; ;; Could be solved by running rerender in separate thread.
 ;; (advice-add 'load-theme :after #'org-typst-preview--rerender-all-org-buffers)
 ;; (advice-add 'enable-theme :after #'org-typst-preview--rerender-all-org-buffers)
