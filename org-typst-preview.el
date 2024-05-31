@@ -62,20 +62,19 @@ Returns t if this is block formula, nil otherwise."
 
 (defun org-typst-preview--opening-forward ()
   "Return t if opening of code block forward from cursor."
-  (save-excursion
-    (forward-char)
-    (and (eq ?\# (preceding-char)) (eq ?\[ (following-char)))))
+  ;; Escape \#[
+  (and (not (char-equal ?\\ (preceding-char)))
+       (char-equal ?\# (following-char))
+       (eq ?\[ (char-after (+ (point) 1)))))
 
 (defun org-typst-preview--closing-forward ()
   "Return t if closing of code block forward from cursor."
-  (eq ?\] (following-char)))
+  ;; Escape \#]
+  (and (not (char-equal ?\\ (preceding-char)))
+       (char-equal ?\# (following-char))
+       (eq ?\] (char-after (+ (point) 1)))))
 
-;; FIXME: There's an issues when org file contains links and when syntax is
-;;        incorrect. Think about ways to avoid those issues. Maybe assume that
-;;        typst code block are not inherited? Another way may be is to handle []
-;;        as well and continue assuming that syntax is correct. One more way to
-;;        do it is to start "thinking" about typst code blocks when first
-;;        opening bracket met and stack is nil.
+
 (defun org-typst-preview--all-code-blocks ()
   "Scan buffer and return list pairs of format (BEG . END).
 
@@ -83,23 +82,15 @@ Note that list in reverse order."
   (interactive)
   (save-excursion
     (goto-char (point-min))
-    (let ((stack '())
-          (spans '())
-          beg)
+    (let ((spans '())
+          (beg 0))
       (while (not (eobp))
         (cond
-         ((org-typst-preview--opening-forward)
-          (if (eq 'closing (car stack))
-              (pop stack)
-            (push 'opening stack)
-            (when (length= stack 1)
-              (setq beg (point)))))
-         ((org-typst-preview--closing-forward)
-          (if (not (eq 'opening (car stack)))
-              (push 'closing stack)
-            (when (length= stack 1)
-              (push (cons beg (1+ (point))) spans))
-            (pop stack))))
+         ((and (eq beg 0) (org-typst-preview--opening-forward))
+          (setq beg (point)))
+         ((and (not (eq beg 0)) (org-typst-preview--closing-forward))
+          (push (cons beg (+ (point) 2)) spans)
+          (setq beg 0)))
         (forward-char))
       spans)))
 
@@ -155,7 +146,7 @@ Currently passes weight and size."
     (insert-char ?\n)
     (insert (or common-configuration "// Your configuration\n"))
     (insert-char ?\n)
-    (insert typst-code)))
+    (insert (substring typst-code 2 -2))))
 
 (defun org-typst-preview--generate-svg-image (typst-code &optional dir)
   "Generate image for TYPST-CODE and return path to it.
