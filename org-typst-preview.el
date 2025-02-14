@@ -140,6 +140,7 @@ Currently passes weight and size."
   "Generate typst file at FILE-PATH with TYPST-CODE and COMMON-CONFIGURATION."
   (with-temp-file file-path
     (insert "#set page(fill: none, width: auto, height: auto, margin: (x: 0pt, y: 0pt))\n") ;; , margin: (x: 20pt, y: 20pt)
+    (insert "#show math.equation: set text(top-edge: \"bounds\", bottom-edge: \"bounds\")\n")
     (insert (format "#set text(fill: %s, %s)\n"
                     (org-typst-preview--typst-foreground-color)
                     (org-typst-preview--typst-font-settings)))
